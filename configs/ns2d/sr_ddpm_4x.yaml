@@ -1,0 +1,76 @@
+
+model:
+  which_model_G: ddpm  # ddpm, sr3
+  finetune_norm: false
+  unet:
+    in_channel: 2
+    out_channel: 1
+    inner_channel: 64
+    channel_multiplier: [1, 1, 2, 2, 4, 4]
+    attn_res: [16]
+    res_blocks: 2
+    dropout: 0.2
+    norm_groups: 32
+  beta_schedule:
+    train:
+      schedule: linear
+      n_timestep: 1000
+      linear_start: 1.0e-4
+      linear_end: 2.0e-2
+    val:
+      schedule: linear
+      n_timestep: 1000
+      linear_start: 1.0e-4
+      linear_end: 2.0e-2
+  diffusion:
+    image_size: 64  # image size
+    channels: 1  # sample channel
+    conditional: True
+
+data:
+  dataset: 'NavierStokes2D'
+  data_path: "/home/dsw/ocean_lzh/ocean_sr/NavierStokes_V1e-5_N1200_T20.mat"
+  downsample_factor: 4
+  train_batchsize: 16
+  eval_batchsize: 1
+  train_ratio: 0.8
+  valid_ratio: 0.001
+  test_ratio: 0.001
+  subset: False
+  subset_ratio: 0.1
+  normalize: True
+  normalizer_type: 'PGN'
+
+train:
+  random_seed: 42
+  cuda: True
+  device: 0
+  epochs: 200
+  patience: 10
+  eval_freq: 10
+  saving_best: True
+  saving_checkpoint: False
+  checkpoint_freq: 10
+  model_type: 'diffusion'  # 'fno' or 'diffusion'
+  phase: 'train'  # 'train' or 'val'
+  model_name: 'DDPM'
+  resume_path: ~
+  visualize: True
+  num_visuals: 10
+
+optimize:
+  optimizer: 'AdamW'
+  lr: 0.0001
+  weight_decay: 0.001
+
+schedule:
+  scheduler: 'StepLR'
+  step_size: 300
+  gamma: 0.5
+
+log:
+  verbose: True
+  log: True
+  log_dir: './logs'
+  wandb: False
+  wandb_project: ''

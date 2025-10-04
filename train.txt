@@ -1,0 +1,19 @@
+python C:\Users\jjj\Desktop\program\code\diffsr_DDP_DDPM\DiffSR-main\DiffSR-main\main.py --config C:\Users\jjj\Desktop\program\code\diffsr_DDP_DDPM\DiffSR-main\DiffSR-main\configs\ns2d\sr_sr3_4x_debug.yaml
+
+# --nproc_per_node=2 表示在当前节点（机器）上启动2个进程
+torchrun --nproc_per_node=2 main.py --config configs/ns2d/sr_ddpm_4x_debug.yaml
+
+# --nproc_per_node=2 表示在当前节点（机器）上启动2个进程
+torchrun --nproc_per_node=2 main.py --config configs/ns2d/sr_ddpm_4x.yaml
+
+
+# --nproc_per_node=2 表示在当前节点（机器）上启动2个进程
+torchrun --nproc_per_node=2 main.py --config configs/ns2d/sr_ddpm_4x.yaml
+
+
+python main.py --config configs/ns2d/fno.yaml
+
+# --nproc_per_node=2 表示在当前节点（机器）上启动2个进程
+torchrun --nproc_per_node=2 main.py --config configs/ns2d/fno.yaml
+
+BASICSR_JIT=True torchrun --nproc_per_node=2 main.py --config configs/ns2d/sr_idm.yaml
