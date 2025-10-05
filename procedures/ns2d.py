@@ -58,17 +58,18 @@ def ns2d_procedure(config: Dict[str, Any]):
     trainer: BaseTrainer = trainer_class(config) 
     
     # --- 关键修正: 调用构建器时，传入对应的配置子字典 ---
+    # model = trainer.build_model(config).to(config['train']['device'])
+    # if config['distributed']:
+    #     model = torch.nn.parallel.DistributedDataParallel(
+    #         model,
+    #         device_ids=[config['train']['device']],  # 假设 device 是 torch.device 对象
+    #         find_unused_parameters=True  # 防止某些参数未被用到导致 reduction 出错
+    #     )
     model = trainer.build_model(config).to(config['train']['device'])
-    if config['distributed']:
-        model = torch.nn.parallel.DistributedDataParallel(
-            model,
-            device_ids=[config['train']['device']],  # 假设 device 是 torch.device 对象
-            find_unused_parameters=True  # 防止某些参数未被用到导致 reduction 出错
-        )
     optimizer = trainer.build_optimizer(model, config['optimize'])
     scheduler = trainer.build_scheduler(optimizer, config['schedule'])
     
-    criterion = LpLoss(d=2, p=2, size_average=False)
+    criterion = LpLoss(d=2, p=2, size_average=True)
     metrics = Metrics()
     
     if is_main_process: # 详细信息只在主进程打印

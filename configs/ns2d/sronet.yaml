@@ -35,7 +35,7 @@ train:
   random_seed: 42
   cuda: True
   device: 0
-  epochs: 5
+  epochs: 20
   patience: 10
   eval_freq: 5
   saving_best: True

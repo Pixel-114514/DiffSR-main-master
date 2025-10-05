@@ -29,8 +29,10 @@ class NavierStokes2DDataset:
         # 单卡训练时, train_sampler为None
         # DDP训练时, 创建DistributedSampler实例
         train_sampler = DistributedSampler(self.train_dataset) if distributed else None
-        valid_sampler = DistributedSampler(self.valid_dataset, shuffle=False) if distributed else None
-        test_sampler = DistributedSampler(self.test_dataset, shuffle=False) if distributed else None
+        # valid_sampler = DistributedSampler(self.valid_dataset, shuffle=False) if distributed else None
+        # test_sampler = DistributedSampler(self.test_dataset, shuffle=False) if distributed else None
+        valid_sampler = None
+        test_sampler = None
 
         # 当sampler不为None时(DDP模式)，shuffle必须为False，因为sampler会处理打乱逻辑
         # 当sampler为None时(单卡模式), shuffle=(train_sampler is None) 的结果为True，保持原有行为
@@ -83,8 +85,8 @@ class NavierStokes2DDataset:
                     normalizer_type='PGN', x_normalizer=None, y_normalizer=None,
                     **kwargs):
         data = data.permute(0, 3, 1, 2).unsqueeze(-1)
-        x = data[:, :-1, :, :, :]
-        y = data[:, 1:, :, :, :]
+        x = data
+        y = data
         
         x = x.flatten(start_dim=0, end_dim=1)
         y = y.flatten(start_dim=0, end_dim=1)
@@ -149,9 +151,9 @@ class NavierStokes2DBase(Dataset):
                  **kwargs):
         self.mode = mode
         self.x = x[:, ::sample_factor[0], ::sample_factor[1], :]
-        self.y = x[..., -1:]
+        self.y = y[..., -1:]
         self.x_normalizer = x_normalizer
-        self.y_normalizer = x_normalizer
+        self.y_normalizer = y_normalizer
 
     def __len__(self):
         return len(self.x)

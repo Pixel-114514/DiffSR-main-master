@@ -54,7 +54,57 @@ class BaseTrainer:
 
 
     def visualize_flow_field(self, lr_input, sr_output, hr_gt, save_path, title=''):
-        pass
+        # 1. 将Tensor移动到CPU并转换为Numpy数组
+        lr = lr_input.squeeze(0).squeeze(-1).cpu().numpy()
+        sr = sr_output.squeeze(0).squeeze(-1).cpu().numpy()
+        hr = hr_gt.squeeze(0).squeeze(-1).cpu().numpy()
+
+        # 误差图
+        error = sr - hr
+
+        # 2. 准备绘图
+        fig, axes = plt.subplots(1, 4, figsize=(22, 6), constrained_layout=True)
+        cmap = 'viridis'
+
+        # 3. 共用 HR 的范围
+        vmin, vmax = hr.min(), hr.max()
+
+        # 绘制低分辨率输入
+        im_lr = axes[0].imshow(lr, cmap=cmap, vmin=vmin, vmax=vmax)
+        axes[0].set_title(f'Low-Res Input\n({lr.shape[0]}x{lr.shape[1]})')
+        axes[0].axis('off')
+
+        # 绘制模型超分输出
+        im_sr = axes[1].imshow(sr, cmap=cmap, vmin=vmin, vmax=vmax)
+        axes[1].set_title(f'Super-Res Output\n({sr.shape[0]}x{sr.shape[1]})')
+        axes[1].axis('off')
+
+        # 绘制高分辨率真值
+        im_hr = axes[2].imshow(hr, cmap=cmap, vmin=vmin, vmax=vmax)
+        axes[2].set_title(f'High-Res Ground Truth\n({hr.shape[0]}x{hr.shape[1]})')
+        axes[2].axis('off')
+
+        # 绘制误差
+        im_err = axes[3].imshow(error, cmap='bwr', vmin=-np.max(np.abs(error)), vmax=np.max(np.abs(error)))
+        axes[3].set_title('Error (SR - HR)')
+        axes[3].axis('off')
+
+        # 4. 添加共用纵向 colorbar（放在右边）
+        cbar = fig.colorbar(im_hr, ax=axes[:3], orientation='vertical',
+                            fraction=0.05, pad=0.02)
+        cbar.set_label("Value", fontsize=12)
+
+        # 为误差图单独加一个 colorbar
+        cbar_err = fig.colorbar(im_err, ax=axes[3], orientation='vertical',
+                                fraction=0.05, pad=0.02)
+        cbar_err.set_label("Error Value", fontsize=12)
+
+        # 5. 设置总标题
+        fig.suptitle(title, fontsize=16)
+
+        # 6. 保存图像
+        fig.savefig(save_path, bbox_inches='tight')
+        plt.close(fig)
 
 
 
@@ -159,22 +209,27 @@ class BaseTrainer:
     
     def train_one_epoch(self, model: torch.nn.Module, train_loader, optimizer, criterion, metrics, scheduler=None, **kwargs) -> LossRecord:
         loss_record = LossRecord(["train_loss"])
-        model.cuda()
+        model.to(self.device_id)
         model.train()
         for (x, y) in train_loader:
-            x = x.to('cuda')
-            y = y.to('cuda')
+            x = x.to(self.device_id)
+            y = y.to(self.device_id)
+            
             # compute loss
             y_pred = model(x).reshape(y.shape)
             data_loss = criterion(y_pred, y)
 
             loss = data_loss
+            
             # compute gradient
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             
-            loss_record.update({"train_loss": loss.sum().item()}, n=y_pred.shape[0])
+            if self.is_distributed:
+                dist.all_reduce(loss, op=dist.ReduceOp.AVG)
+            # loss_record.update({"train_loss": loss.sum().item()}, n=y_pred.shape[0])
+            loss_record.update({"train_loss": loss.item()}, n=y_pred.shape[0])
         if scheduler is not None:
             scheduler.step()
         return loss_record
@@ -187,8 +242,8 @@ class BaseTrainer:
         model.eval()
         with torch.no_grad():
             for (x, y) in eval_loader:
-                x = x.to('cuda')
-                y = y.to('cuda')
+                x = x.to(self.device_id)
+                y = y.to(self.device_id)
                 # compute loss
                 y_pred = model(x).reshape(y.shape)
                 
@@ -201,7 +256,8 @@ class BaseTrainer:
                 loss = data_loss
                 
                 update_dict = {
-                f"{split}_loss": loss.sum().item(),
+                # f"{split}_loss": loss.sum().item(),
+                f"{split}_loss": loss.item(),
                 f"{split}_mae": float(mae),
                 f"{split}_mse": float(mse),
                 f"{split}_rmse": float(rmse),
@@ -218,9 +274,9 @@ class BaseTrainer:
         完整的训练、验证和测试流程，支持断点重训。
         """
         # --- 1. 初始化和DDP封装 ---
-        # model.to(self.device_id)
-        # if self.is_distributed:
-        #     model = DistributedDataParallel(model, device_ids=[self.device_id], find_unused_parameters=False)
+        model.to(self.device_id)
+        if self.is_distributed:
+            model = DistributedDataParallel(model, device_ids=[self.device_id], find_unused_parameters=False)
 
         start_epoch = 0
         best_epoch = -1
