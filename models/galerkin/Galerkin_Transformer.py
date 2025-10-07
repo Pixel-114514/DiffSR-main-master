@@ -147,7 +147,7 @@ class Galerkin_Transformer(nn.Module):
         # 拼接位置编码 [B, 4096, 1] + [1, 4096, 64] → [B, 4096, 65]
         pos_emb = self.pos.repeat(B, 1, 1)
         fx = torch.cat([fx, pos_emb], dim=-1)
-        print('fx shape after pos emb:', fx.shape)
+        # print('fx shape after pos emb:', fx.shape)
         
         fx = self.preprocess(fx)  # [B, 4096, 256]
         fx = fx + self.placeholder[None, None, :]

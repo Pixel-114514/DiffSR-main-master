@@ -221,12 +221,13 @@ class BaseTrainer:
 
             loss = data_loss
             
-            # compute gradient
+            # compute gradient 多卡训练时，计算每个GPU上模型副本的局部梯度，然后进行全局梯度求和
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             
             if self.is_distributed:
+                # 集合通信操作，会收集所有的GPU进程上的loss，然后平均，将结果存回每个进程的loss变量中
                 dist.all_reduce(loss, op=dist.ReduceOp.AVG)
             # loss_record.update({"train_loss": loss.sum().item()}, n=y_pred.shape[0])
             loss_record.update({"train_loss": loss.item()}, n=y_pred.shape[0])
@@ -266,6 +267,7 @@ class BaseTrainer:
                 f"{split}_ssim": float(ssim)
             }
                 loss_record.update(update_dict, n=y_pred.shape[0])
+
         return loss_record
 
     def process(self, model: torch.nn.Module, train_loader, valid_loader, test_loader, optimizer, 
@@ -276,7 +278,7 @@ class BaseTrainer:
         # --- 1. 初始化和DDP封装 ---
         model.to(self.device_id)
         if self.is_distributed:
-            model = DistributedDataParallel(model, device_ids=[self.device_id], find_unused_parameters=False)
+            model = DistributedDataParallel(model, device_ids=[self.device_id], find_unused_parameters=True)
 
         start_epoch = 0
         best_epoch = -1
@@ -328,7 +330,10 @@ class BaseTrainer:
                 if self.is_main_process:
                     visualize = self.train_config.get('visualize', False)
                     num_visuals = self.train_config.get('num_visuals', 10)
-                    valid_loss = self.evaluate(model, valid_loader, criterion, metrics, split="valid",visualize=visualize,num_visuals=num_visuals,epoch=epoch,**kwargs)
+                    # 解决锁死最关键的步骤
+                    model_to_eval = model.module if self.is_distributed else model
+                    # valid_loss = self.evaluate(model, valid_loader, criterion, metrics, split="valid",visualize=visualize,num_visuals=num_visuals,epoch=epoch,**kwargs)
+                    valid_loss = self.evaluate(model_to_eval, valid_loader, criterion, metrics, split="valid",visualize=visualize,num_visuals=num_visuals,epoch=epoch,**kwargs)
                 
                 if self.is_main_process:
                     self.logger(f"Epoch {epoch}/{epochs-1} | {valid_loss}")
@@ -384,7 +389,8 @@ class BaseTrainer:
                         'optimizer_state_dict': optimizer.state_dict(),
                         'scheduler_state_dict': scheduler.state_dict(),
                         }, hist_path)
-
+            if self.is_distributed:
+                dist.barrier()      
 
         self.logger("Training finished. Evaluating on the test set with the best model.")
         

@@ -17,7 +17,7 @@ class NavierStokes2DDataset:
                  train_batchsize=10, eval_batchsize=10, 
                  train_ratio=0.8, valid_ratio=0.1, test_ratio=0.1, 
                  normalize=True, normalizer_type='PGN',
-                 distributed=False,  # 新增参数，用于控制是否启用DDP，默认为False（单卡）
+                 distributed=False, # 单卡训练或多卡训练
                  **kwargs):
         self.load_data(data_path=data_path, 
                        train_ratio=train_ratio, valid_ratio=valid_ratio, test_ratio=test_ratio, 
@@ -26,15 +26,15 @@ class NavierStokes2DDataset:
 
         # --- DDP兼容性修改 ---
         # 根据distributed参数决定是否创建sampler
-        # 单卡训练时, train_sampler为None
-        # DDP训练时, 创建DistributedSampler实例
+        # DDP训练时, 创建DistributedSampler实例，确保在训练时，每个 GPU 进程都得到整个数据集的一个不重叠的子集。它内部会自动处理数据打乱。
         train_sampler = DistributedSampler(self.train_dataset) if distributed else None
         # valid_sampler = DistributedSampler(self.valid_dataset, shuffle=False) if distributed else None
         # test_sampler = DistributedSampler(self.test_dataset, shuffle=False) if distributed else None
+        # 只在主进程上进行验证和测试，或者每个进程都独立地在完整的验证/测试集上进行评估(会有冗余，造成资源浪费)
         valid_sampler = None
         test_sampler = None
 
-        # 当sampler不为None时(DDP模式)，shuffle必须为False，因为sampler会处理打乱逻辑
+        # 当sampler不为None时(DDP模式)，shuffle必须为False，因为sampler会处理打乱逻辑，如果shuffle也为True，程序会报错
         # 当sampler为None时(单卡模式), shuffle=(train_sampler is None) 的结果为True，保持原有行为
         self.train_loader = DataLoader(self.train_dataset, 
                                        batch_size=train_batchsize, 
@@ -56,6 +56,7 @@ class NavierStokes2DDataset:
         process_path = data_path.split('.')[0] + '_processed.pt'
         if osp.exists(process_path):
             print('Loading processed data from ', process_path)
+            # 允许torch.load 加载文件中包含的非张量Python对象（如自定义类的实例），但前提是你必须完全信任这个文件的来源
             train_x, train_y, valid_x, valid_y, test_x, test_y, x_normalizer, y_normalizer = torch.load(process_path,weights_only=False)
         else:
             print('Processing data...')
@@ -64,16 +65,19 @@ class NavierStokes2DDataset:
                 data = torch.tensor(raw_data['u'], dtype=torch.float32)
             except:
                 raw_data = File(data_path, 'r')
+                # 对数据进行维度变换
                 data = torch.tensor(np.transpose(raw_data['u'], (3, 1, 2, 0)), dtype=torch.float32)
             data_size = data.shape[0]
             train_idx = int(data_size * train_ratio)
             valid_idx = int(data_size * (train_ratio + valid_ratio))
             test_idx = int(data_size * (train_ratio + valid_ratio + test_ratio))
-            
+
+            # 训练模式，返回数据归一化器x_normalizer和y_normalizer
             train_x, train_y, x_normalizer, y_normalizer = self.pre_process(data[:train_idx], mode='train', normalize=normalize, normalizer_type=normalizer_type)
             valid_x, valid_y = self.pre_process(data[train_idx:valid_idx], mode='valid', normalize=normalize, x_normalizer=x_normalizer, y_normalizer=y_normalizer)
             test_x, test_y = self.pre_process(data[valid_idx:test_idx], mode='test', normalize=normalize, x_normalizer=x_normalizer, y_normalizer=y_normalizer)
             print('Saving data...')
+            # 所有预处理的结果（包括数据和归一化器）打包成一个元组，并使用 torch.save 保存到缓存文件中
             torch.save((train_x, train_y, valid_x, valid_y, test_x, test_y, x_normalizer, y_normalizer), process_path)
             print('Data processed and saved to', process_path)
 
@@ -103,6 +107,7 @@ class NavierStokes2DDataset:
                 else:
                     x_normalizer = GaussianNormalizer(x)
                     y_normalizer = GaussianNormalizer(y)
+                # 标准化：(x-mean)/std
                 x = x_normalizer.encode(x)
                 y = y_normalizer.encode(y)
             else:
@@ -114,6 +119,7 @@ class NavierStokes2DDataset:
             x_normalizer = None
             y_normalizer = None
 
+        # 绝对位置编码
         grid_x = torch.linspace(0, 1, H)
         grid_x = grid_x.reshape(1, H, 1, 1).repeat(B, 1, W, 1)
         grid_y = torch.linspace(0, 1, W)

@@ -21,7 +21,9 @@ def ns2d_procedure(config: Dict[str, Any]):
     is_main_process = not config.get('distributed', False) or config.get('rank') == 0
 
     if is_main_process and config['log'].get('wandb', False):
+        # 为wandb的这次运行创建一个唯一的、可读的名称
         run_name = f"{config['train']['model_name']}_{config['data']['dataset']}_{int(time())}"
+        # 初始化wandb，第一项配置项目的归属，第二项配置运行名称，第三项传入完整配置以便追踪
         wandb.init(
             project=config['log'].get('wandb_project', 'default-project'), 
             name=run_name,
@@ -58,6 +60,7 @@ def ns2d_procedure(config: Dict[str, Any]):
     trainer: BaseTrainer = trainer_class(config) 
     
     # --- 关键修正: 调用构建器时，传入对应的配置子字典 ---
+    #DDP的作用：它能自动处理多GPU之间的数据分发和梯度同步，是实现分布式训练的核心。用于包装模型
     # model = trainer.build_model(config).to(config['train']['device'])
     # if config['distributed']:
     #     model = torch.nn.parallel.DistributedDataParallel(
