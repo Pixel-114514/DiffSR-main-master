@@ -1,0 +1,188 @@
+_wandb:
+    value:
+        cli_version: 0.21.3
+        e:
+            u3rrrch71k8ohpw99anrc86votjciwub:
+                args:
+                    - --config
+                    - configs/ns2d/fno.yaml
+                codePath: main.py
+                codePathLocal: main.py
+                cpu_count: 128
+                cpu_count_logical: 256
+                cudaVersion: "12.8"
+                disk:
+                    /:
+                        total: "1081101176832"
+                        used: "70421929984"
+                email: 462008633@qq.com
+                executable: /home/yc/miniconda3/envs/IFact/bin/python
+                git:
+                    commit: 29157be6073b840da4a7ae38fae21380fef554aa
+                    remote: https://github.com/Enzo-888/DiffSR-main-master.git
+                gpu: NVIDIA GeForce RTX 4090
+                gpu_count: 8
+                gpu_nvidia:
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-89039bd5-3694-bde1-a71a-664411b1361c
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-b202588c-189f-9e36-8842-ad4d8b17872f
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-21775a69-56d7-419b-ce40-e7ce8982ef85
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-67dcdc6c-07e1-9817-8755-d9305a605ea5
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-112ec9c3-35db-49e2-012e-470edd8332af
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-60e5f1c6-55c0-5cec-da87-78fab91f7004
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-aebe55b3-793a-32c6-e6e0-77613dfed13e
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-c5da434f-3a42-e100-e66a-b5797c2c0ea6
+                host: sustocean
+                memory:
+                    total: "1082041020416"
+                os: Linux-5.4.0-216-generic-x86_64-with-glibc2.31
+                program: /home/yc/CVPR_26_fluid_SR/DiffSR-main-master1/DiffSR-main-master/main.py
+                python: CPython 3.10.18
+                root: /home/yc/CVPR_26_fluid_SR/DiffSR-main-master1/DiffSR-main-master
+                startedAt: "2025-10-07T09:01:42.107119Z"
+                writerId: u3rrrch71k8ohpw99anrc86votjciwub
+        m: []
+        python_version: 3.10.18
+        t:
+            "1":
+                - 1
+                - 41
+                - 49
+                - 51
+                - 63
+            "2":
+                - 1
+                - 41
+                - 49
+                - 51
+                - 63
+            "3":
+                - 2
+                - 13
+                - 16
+                - 61
+                - 62
+            "4": 3.10.18
+            "5": 0.21.3
+            "12": 0.21.3
+            "13": linux-x86_64
+data:
+    value:
+        data_path: /home/yc/CVPR_26_fluid_SR/DiffSR-main-master1/DiffSR-main-master/NavierStokes_V1e-5_N1200_T20.mat
+        dataset: NavierStokes2D
+        eval_batchsize: 128
+        normalize: true
+        normalizer_type: PGN
+        sample_factor:
+            - 2
+            - 2
+        subset: false
+        subset_ratio: 0.1
+        test_ratio: 0.01
+        train_batchsize: 128
+        train_ratio: 0.08
+        valid_ratio: 0.01
+device:
+    value: cuda:0
+distributed:
+    value: true
+local_rank:
+    value: 0
+log:
+    value:
+        log: true
+        log_dir: ./logs
+        saving_path: logs/NavierStokes2D/20251007_090141_FNO2d
+        verbose: true
+        wandb: true
+        wandb_project: FNO2d-NavierStokes2D
+model:
+    value:
+        act: gelu
+        fc_dim: 128
+        in_dim: 3
+        layers:
+            - 16
+            - 24
+            - 24
+            - 32
+            - 32
+        modes1:
+            - 15
+            - 12
+            - 9
+            - 9
+            - 9
+        modes2:
+            - 15
+            - 12
+            - 9
+            - 9
+            - 9
+        out_dim: 1
+        upsample_factor:
+            - 2
+            - 2
+        width: 64
+optimize:
+    value:
+        lr: 0.002
+        optimizer: AdamW
+        weight_decay: 0.001
+rank:
+    value: 0
+schedule:
+    value:
+        gamma: 0.5
+        scheduler: StepLR
+        step_size: 300
+train:
+    value:
+        checkpoint_freq: 1
+        cuda: true
+        device: cuda:0
+        distributed: true
+        epochs: 40
+        eval_freq: 5
+        model_name: FNO2d
+        model_type: neural_operator
+        patience: 10
+        random_seed: 42
+        resume_path: null
+        saving_best: true
+        saving_checkpoint: true
+        visual_interval: 1
+        visualize: true
+world_size:
+    value: 2

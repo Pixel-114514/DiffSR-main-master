@@ -1,0 +1,126 @@
+2025-10-07 09:01:43 - [INFO] - Loading dataset: NavierStokes2D
+Loading processed data from  /home/yc/CVPR_26_fluid_SR/DiffSR-main-master1/DiffSR-main-master/NavierStokes_V1e-5_N1200_T20_processed.pt
+2025-10-07 09:01:43 - [INFO] - Dataset loading completed in 0.07s
+2025-10-07 09:01:43 - [INFO] - Building model trainer: FNO2d
+2025-10-07 09:01:43 - [INFO] - Trainer initialized. Distributed mode: True
+2025-10-07 09:01:43 - [INFO] - Device: cuda:0
+2025-10-07 09:01:43 - [INFO] - Full configuration loaded.
+2025-10-07 09:01:43 - [INFO] - FNO2DTrainer 已初始化。
+2025-10-07 09:01:43 - [INFO] - 正在使用以下参数构建 FNO2d 模型: {'modes1': [15, 12, 9, 9, 9], 'modes2': [15, 12, 9, 9, 9], 'width': 64, 'fc_dim': 128, 'layers': [16, 24, 24, 32, 32], 'in_dim': 3, 'out_dim': 1, 'act': 'gelu', 'upsample_factor': [2, 2]}
+2025-10-07 09:01:43 - [INFO] - Model architecture:
+FNO2d(
+  (fc0): Linear(in_features=3, out_features=16, bias=True)
+  (sp_convs): ModuleList(
+    (0-3): 4 x SpectralConv2d()
+  )
+  (ws): ModuleList(
+    (0): Conv1d(16, 24, kernel_size=(1,), stride=(1,))
+    (1): Conv1d(24, 24, kernel_size=(1,), stride=(1,))
+    (2): Conv1d(24, 32, kernel_size=(1,), stride=(1,))
+    (3): Conv1d(32, 32, kernel_size=(1,), stride=(1,))
+  )
+  (up_sp_conv): SpectralUpsampleConv2d()
+  (up_ws): ConvTranspose2d(16, 16, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), output_padding=(1, 1))
+  (fc1): Linear(in_features=32, out_features=128, bias=True)
+  (fc2): Linear(in_features=128, out_features=32, bias=True)
+  (fc3): Linear(in_features=32, out_features=1, bias=True)
+)
+2025-10-07 09:01:43 - [INFO] - Optimizer: AdamW (
+Parameter Group 0
+    amsgrad: False
+    betas: (0.9, 0.999)
+    capturable: False
+    differentiable: False
+    eps: 1e-08
+    foreach: None
+    fused: None
+    initial_lr: 0.002
+    lr: 0.002
+    maximize: False
+    weight_decay: 0.001
+)
+2025-10-07 09:01:43 - [INFO] - Scheduler: <torch.optim.lr_scheduler.StepLR object at 0x7f273e0aeda0>
+2025-10-07 09:01:43 - [INFO] - Criterion: <utils.loss.LpLoss object at 0x7f273e0ad360>
+2025-10-07 09:01:43 - [INFO] - Model and trainer setup completed in 0.06s
+2025-10-07 09:01:43 - [INFO] - Starting training process...
+2025-10-07 09:01:43 - [INFO] - Starting training...
+2025-10-07 09:01:43 - [INFO] - Train dataset size: 1920
+2025-10-07 09:01:43 - [INFO] - Valid dataset size: 240
+2025-10-07 09:01:43 - [INFO] - Test dataset size: 220
+2025-10-07 09:01:44 - [INFO] - Epoch 0/39 | train_loss: 1.00812453 | Time: 1.37s | lr: 0.002000
+2025-10-07 09:01:45 - [INFO] - Epoch 1/39 | train_loss: 1.00040547 | Time: 0.66s | lr: 0.002000
+2025-10-07 09:01:46 - [INFO] - Epoch 2/39 | train_loss: 0.98303186 | Time: 0.69s | lr: 0.002000
+2025-10-07 09:01:47 - [INFO] - Epoch 3/39 | train_loss: 0.76829063 | Time: 0.64s | lr: 0.002000
+2025-10-07 09:01:47 - [INFO] - Epoch 4/39 | train_loss: 0.47238149 | Time: 0.65s | lr: 0.002000
+2025-10-07 09:01:47 - [INFO] - Visualizing sample at epoch 4 to logs/NavierStokes2D/20251007_090141_FNO2d/visualization/epoch_0004
+2025-10-07 09:01:48 - [INFO] - Saved visualization to logs/NavierStokes2D/20251007_090141_FNO2d/visualization/epoch_0004/sample_epoch_0004.png
+2025-10-07 09:01:48 - [INFO] - Epoch 4/39 | valid_loss: 0.34617174 | valid_mae: 0.22418837 | valid_mse: 0.10333505 | valid_rmse: 0.32145148 | valid_relative_l2: 0.28805204 | valid_psnr: 26.01691194 | valid_ssim: 0.85696394 | Time: 0.64s
+2025-10-07 09:01:49 - [INFO] - New best model saved at epoch 4 to logs/NavierStokes2D/20251007_090141_FNO2d/checkpoint/best_model.pth
+2025-10-07 09:01:50 - [INFO] - Epoch 5/39 | train_loss: 0.34942265 | Time: 0.68s | lr: 0.002000
+2025-10-07 09:01:51 - [INFO] - Epoch 6/39 | train_loss: 0.25500558 | Time: 0.68s | lr: 0.002000
+2025-10-07 09:01:51 - [INFO] - Epoch 7/39 | train_loss: 0.19315736 | Time: 0.66s | lr: 0.002000
+2025-10-07 09:01:52 - [INFO] - Epoch 8/39 | train_loss: 0.17923199 | Time: 0.68s | lr: 0.002000
+2025-10-07 09:01:53 - [INFO] - Epoch 9/39 | train_loss: 0.16652503 | Time: 0.67s | lr: 0.002000
+2025-10-07 09:01:53 - [INFO] - Visualizing sample at epoch 9 to logs/NavierStokes2D/20251007_090141_FNO2d/visualization/epoch_0009
+2025-10-07 09:01:53 - [INFO] - Saved visualization to logs/NavierStokes2D/20251007_090141_FNO2d/visualization/epoch_0009/sample_epoch_0009.png
+2025-10-07 09:01:53 - [INFO] - Epoch 9/39 | valid_loss: 0.12631930 | valid_mae: 0.08626436 | valid_mse: 0.02206911 | valid_rmse: 0.14847283 | valid_relative_l2: 0.13312901 | valid_psnr: 33.01570919 | valid_ssim: 0.99110859 | Time: 0.56s
+2025-10-07 09:01:53 - [INFO] - New best model saved at epoch 9 to logs/NavierStokes2D/20251007_090141_FNO2d/checkpoint/best_model.pth
+2025-10-07 09:01:54 - [INFO] - Epoch 10/39 | train_loss: 0.16220782 | Time: 0.67s | lr: 0.002000
+2025-10-07 09:01:55 - [INFO] - Epoch 11/39 | train_loss: 0.15893340 | Time: 0.69s | lr: 0.002000
+2025-10-07 09:01:56 - [INFO] - Epoch 12/39 | train_loss: 0.15420324 | Time: 0.67s | lr: 0.002000
+2025-10-07 09:01:56 - [INFO] - Epoch 13/39 | train_loss: 0.14958222 | Time: 0.66s | lr: 0.002000
+2025-10-07 09:01:57 - [INFO] - Epoch 14/39 | train_loss: 0.14485601 | Time: 0.67s | lr: 0.002000
+2025-10-07 09:01:57 - [INFO] - Visualizing sample at epoch 14 to logs/NavierStokes2D/20251007_090141_FNO2d/visualization/epoch_0014
+2025-10-07 09:01:58 - [INFO] - Saved visualization to logs/NavierStokes2D/20251007_090141_FNO2d/visualization/epoch_0014/sample_epoch_0014.png
+2025-10-07 09:01:58 - [INFO] - Epoch 14/39 | valid_loss: 0.11002276 | valid_mae: 0.07884003 | valid_mse: 0.02038122 | valid_rmse: 0.14265309 | valid_relative_l2: 0.12792692 | valid_psnr: 33.49931840 | valid_ssim: 0.98730295 | Time: 1.00s
+2025-10-07 09:01:58 - [INFO] - New best model saved at epoch 14 to logs/NavierStokes2D/20251007_090141_FNO2d/checkpoint/best_model.pth
+2025-10-07 09:01:59 - [INFO] - Epoch 15/39 | train_loss: 0.14013732 | Time: 0.72s | lr: 0.002000
+2025-10-07 09:02:00 - [INFO] - Epoch 16/39 | train_loss: 0.13615826 | Time: 0.74s | lr: 0.002000
+2025-10-07 09:02:01 - [INFO] - Epoch 17/39 | train_loss: 0.13296890 | Time: 0.65s | lr: 0.002000
+2025-10-07 09:02:01 - [INFO] - Epoch 18/39 | train_loss: 0.12998671 | Time: 0.68s | lr: 0.002000
+2025-10-07 09:02:02 - [INFO] - Epoch 19/39 | train_loss: 0.12714152 | Time: 0.68s | lr: 0.002000
+2025-10-07 09:02:02 - [INFO] - Visualizing sample at epoch 19 to logs/NavierStokes2D/20251007_090141_FNO2d/visualization/epoch_0019
+2025-10-07 09:02:03 - [INFO] - Saved visualization to logs/NavierStokes2D/20251007_090141_FNO2d/visualization/epoch_0019/sample_epoch_0019.png
+2025-10-07 09:02:03 - [INFO] - Epoch 19/39 | valid_loss: 0.09485121 | valid_mae: 0.06941116 | valid_mse: 0.01696910 | valid_rmse: 0.13013792 | valid_relative_l2: 0.11671707 | valid_psnr: 34.27143101 | valid_ssim: 0.99211157 | Time: 0.56s
+2025-10-07 09:02:03 - [INFO] - New best model saved at epoch 19 to logs/NavierStokes2D/20251007_090141_FNO2d/checkpoint/best_model.pth
+2025-10-07 09:02:03 - [INFO] - Epoch 20/39 | train_loss: 0.12474015 | Time: 0.66s | lr: 0.002000
+2025-10-07 09:02:04 - [INFO] - Epoch 21/39 | train_loss: 0.12596603 | Time: 0.69s | lr: 0.002000
+2025-10-07 09:02:05 - [INFO] - Epoch 22/39 | train_loss: 0.12357851 | Time: 0.67s | lr: 0.002000
+2025-10-07 09:02:06 - [INFO] - Epoch 23/39 | train_loss: 0.12297535 | Time: 0.67s | lr: 0.002000
+2025-10-07 09:02:06 - [INFO] - Epoch 24/39 | train_loss: 0.12190497 | Time: 0.71s | lr: 0.002000
+2025-10-07 09:02:06 - [INFO] - Visualizing sample at epoch 24 to logs/NavierStokes2D/20251007_090141_FNO2d/visualization/epoch_0024
+2025-10-07 09:02:07 - [INFO] - Saved visualization to logs/NavierStokes2D/20251007_090141_FNO2d/visualization/epoch_0024/sample_epoch_0024.png
+2025-10-07 09:02:07 - [INFO] - Epoch 24/39 | valid_loss: 0.08972046 | valid_mae: 0.06737879 | valid_mse: 0.01654109 | valid_rmse: 0.12847168 | valid_relative_l2: 0.11522921 | valid_psnr: 34.38873941 | valid_ssim: 0.98998902 | Time: 0.55s
+2025-10-07 09:02:07 - [INFO] - New best model saved at epoch 24 to logs/NavierStokes2D/20251007_090141_FNO2d/checkpoint/best_model.pth
+2025-10-07 09:02:08 - [INFO] - Epoch 25/39 | train_loss: 0.12152771 | Time: 0.67s | lr: 0.002000
+2025-10-07 09:02:08 - [INFO] - Epoch 26/39 | train_loss: 0.12237166 | Time: 0.70s | lr: 0.002000
+2025-10-07 09:02:09 - [INFO] - Epoch 27/39 | train_loss: 0.12183052 | Time: 0.68s | lr: 0.002000
+2025-10-07 09:02:10 - [INFO] - Epoch 28/39 | train_loss: 0.12716680 | Time: 0.65s | lr: 0.002000
+2025-10-07 09:02:11 - [INFO] - Epoch 29/39 | train_loss: 0.12521766 | Time: 0.67s | lr: 0.002000
+2025-10-07 09:02:11 - [INFO] - Visualizing sample at epoch 29 to logs/NavierStokes2D/20251007_090141_FNO2d/visualization/epoch_0029
+2025-10-07 09:02:11 - [INFO] - Saved visualization to logs/NavierStokes2D/20251007_090141_FNO2d/visualization/epoch_0029/sample_epoch_0029.png
+2025-10-07 09:02:11 - [INFO] - Epoch 29/39 | valid_loss: 0.09936008 | valid_mae: 0.07363135 | valid_mse: 0.01774917 | valid_rmse: 0.13312503 | valid_relative_l2: 0.11938173 | valid_psnr: 33.93589683 | valid_ssim: 0.89869312 | Time: 0.55s
+2025-10-07 09:02:11 - [INFO] - Validation loss did not improve. Early stopping counter: 1/10
+2025-10-07 09:02:12 - [INFO] - Epoch 30/39 | train_loss: 0.12670091 | Time: 0.68s | lr: 0.002000
+2025-10-07 09:02:13 - [INFO] - Epoch 31/39 | train_loss: 0.12666382 | Time: 0.67s | lr: 0.002000
+2025-10-07 09:02:13 - [INFO] - Epoch 32/39 | train_loss: 0.12723250 | Time: 0.67s | lr: 0.002000
+2025-10-07 09:02:14 - [INFO] - Epoch 33/39 | train_loss: 0.12900246 | Time: 0.70s | lr: 0.002000
+2025-10-07 09:02:15 - [INFO] - Epoch 34/39 | train_loss: 0.12689902 | Time: 0.67s | lr: 0.002000
+2025-10-07 09:02:15 - [INFO] - Visualizing sample at epoch 34 to logs/NavierStokes2D/20251007_090141_FNO2d/visualization/epoch_0034
+2025-10-07 09:02:15 - [INFO] - Saved visualization to logs/NavierStokes2D/20251007_090141_FNO2d/visualization/epoch_0034/sample_epoch_0034.png
+2025-10-07 09:02:16 - [INFO] - Epoch 34/39 | valid_loss: 0.09341503 | valid_mae: 0.07255187 | valid_mse: 0.01812583 | valid_rmse: 0.13452196 | valid_relative_l2: 0.12063860 | valid_psnr: 34.04246158 | valid_ssim: 0.98968500 | Time: 0.56s
+2025-10-07 09:02:16 - [INFO] - Validation loss did not improve. Early stopping counter: 2/10
+2025-10-07 09:02:16 - [INFO] - Epoch 35/39 | train_loss: 0.12709481 | Time: 0.70s | lr: 0.002000
+2025-10-07 09:02:17 - [INFO] - Epoch 36/39 | train_loss: 0.13241388 | Time: 0.69s | lr: 0.002000
+2025-10-07 09:02:18 - [INFO] - Epoch 37/39 | train_loss: 0.13117721 | Time: 0.65s | lr: 0.002000
+2025-10-07 09:02:19 - [INFO] - Epoch 38/39 | train_loss: 0.13523586 | Time: 0.66s | lr: 0.002000
+2025-10-07 09:02:19 - [INFO] - Epoch 39/39 | train_loss: 0.13619776 | Time: 0.68s | lr: 0.002000
+2025-10-07 09:02:19 - [INFO] - Visualizing sample at epoch 39 to logs/NavierStokes2D/20251007_090141_FNO2d/visualization/epoch_0039
+2025-10-07 09:02:20 - [INFO] - Saved visualization to logs/NavierStokes2D/20251007_090141_FNO2d/visualization/epoch_0039/sample_epoch_0039.png
+2025-10-07 09:02:20 - [INFO] - Epoch 39/39 | valid_loss: 0.09617214 | valid_mae: 0.07491521 | valid_mse: 0.01882233 | valid_rmse: 0.13709082 | valid_relative_l2: 0.12293795 | valid_psnr: 33.81459939 | valid_ssim: 0.99136363 | Time: 0.78s
+2025-10-07 09:02:20 - [INFO] - Validation loss did not improve. Early stopping counter: 3/10
+2025-10-07 09:02:20 - [INFO] - Training finished. Evaluating on the test set with the best model.
+2025-10-07 09:02:20 - [INFO] - Loaded model from logs/NavierStokes2D/20251007_090141_FNO2d/checkpoint/best_model.pth (best at epoch 24) for final testing.
+/home/yc/CVPR_26_fluid_SR/DiffSR-main-master1/DiffSR-main-master/trainers/base.py:394: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  model_to_eval.load_state_dict(torch.load(best_model_path, map_location=self.device_id))
+2025-10-07 09:02:20 - [INFO] - Final Test Metrics: test_loss: 0.08667374 | test_mae: 0.06867162 | test_mse: 0.01703813 | test_rmse: 0.13046800 | test_relative_l2: 0.11407310 | test_psnr: 34.52215521 | test_ssim: 0.98937096 | Time: 0.13s

@@ -33,10 +33,10 @@ train:
   eval_freq: 5
   saving_best: True
   saving_checkpoint: True
-  checkpoint_freq: 1
+  checkpoint_freq: 20
   resume_path: ~
-  visualize: False
-  num_visuals: 20
+  visualize: True
+  visual_interval: 1
   model_type: 'neural_operator'  # 'neural_operator' or 'diffusion'
   distributed: True
 
@@ -55,5 +55,5 @@ log:
   verbose: True
   log: True
   log_dir: './logs'
-  wandb: False
-  wandb_project: ''
+  wandb: True
+  wandb_project: 'FNO2d-NavierStokes2D'

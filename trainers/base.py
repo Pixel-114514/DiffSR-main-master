@@ -13,6 +13,7 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel
 from matplotlib import pyplot as plt
 from utils.loss import LossRecord
+from utils.visualization import visualize_flow_field
 import numpy as np
 
 class BaseTrainer:
@@ -51,62 +52,6 @@ class BaseTrainer:
         # DDP模式下，主进程的rank为0
         rank = self.config.get('rank', 0)
         return not self.is_distributed or rank == 0
-
-
-    def visualize_flow_field(self, lr_input, sr_output, hr_gt, save_path, title=''):
-        # 1. 将Tensor移动到CPU并转换为Numpy数组
-        lr = lr_input.squeeze(0).squeeze(-1).cpu().numpy()
-        sr = sr_output.squeeze(0).squeeze(-1).cpu().numpy()
-        hr = hr_gt.squeeze(0).squeeze(-1).cpu().numpy()
-
-        # 误差图
-        error = sr - hr
-
-        # 2. 准备绘图
-        fig, axes = plt.subplots(1, 4, figsize=(22, 6), constrained_layout=True)
-        cmap = 'viridis'
-
-        # 3. 共用 HR 的范围
-        vmin, vmax = hr.min(), hr.max()
-
-        # 绘制低分辨率输入
-        im_lr = axes[0].imshow(lr, cmap=cmap, vmin=vmin, vmax=vmax)
-        axes[0].set_title(f'Low-Res Input\n({lr.shape[0]}x{lr.shape[1]})')
-        axes[0].axis('off')
-
-        # 绘制模型超分输出
-        im_sr = axes[1].imshow(sr, cmap=cmap, vmin=vmin, vmax=vmax)
-        axes[1].set_title(f'Super-Res Output\n({sr.shape[0]}x{sr.shape[1]})')
-        axes[1].axis('off')
-
-        # 绘制高分辨率真值
-        im_hr = axes[2].imshow(hr, cmap=cmap, vmin=vmin, vmax=vmax)
-        axes[2].set_title(f'High-Res Ground Truth\n({hr.shape[0]}x{hr.shape[1]})')
-        axes[2].axis('off')
-
-        # 绘制误差
-        im_err = axes[3].imshow(error, cmap='bwr', vmin=-np.max(np.abs(error)), vmax=np.max(np.abs(error)))
-        axes[3].set_title('Error (SR - HR)')
-        axes[3].axis('off')
-
-        # 4. 添加共用纵向 colorbar（放在右边）
-        cbar = fig.colorbar(im_hr, ax=axes[:3], orientation='vertical',
-                            fraction=0.05, pad=0.02)
-        cbar.set_label("Value", fontsize=12)
-
-        # 为误差图单独加一个 colorbar
-        cbar_err = fig.colorbar(im_err, ax=axes[3], orientation='vertical',
-                                fraction=0.05, pad=0.02)
-        cbar_err.set_label("Error Value", fontsize=12)
-
-        # 5. 设置总标题
-        fig.suptitle(title, fontsize=16)
-
-        # 6. 保存图像
-        fig.savefig(save_path, bbox_inches='tight')
-        plt.close(fig)
-
-
 
     # --------------------------------------------------------------------------
     #  模块构建与加载
@@ -236,13 +181,29 @@ class BaseTrainer:
         return loss_record
 
     @torch.no_grad()
-    def evaluate(self, model, eval_loader, criterion, metrics, split="valid", **kwargs):
+    def evaluate(self, model, eval_loader, criterion, metrics, split="valid", epoch: int = 0, visualize: bool = False, visual_interval: int = 1, **kwargs):
         metric_names = ['mae','mse', 'rmse','relative_l2', 'psnr','ssim']
         tracked_metrics = [f"{split}_loss"] + [f"{split}_{name}" for name in metric_names]
         loss_record = LossRecord(tracked_metrics)
+        
+        # 只在主进程且满足可视化条件时创建可视化目录
+        should_visualize = (
+            self.is_main_process and 
+            visualize and 
+            split == "valid" and  # 只在验证集上可视化
+            (epoch % visual_interval == 0)  # 满足可视化间隔
+        )
+        if should_visualize:
+            vis_dir = self.saving_path / 'visualization' / f"epoch_{epoch:04d}"
+            vis_dir.mkdir(exist_ok=True, parents=True)
+            self.logger(f"Visualizing sample at epoch {epoch} to {vis_dir}")
+        
         model.eval()
+        visualized = False
+        visualization_path = None
+        
         with torch.no_grad():
-            for (x, y) in eval_loader:
+            for batch_idx, (x, y) in enumerate(eval_loader):
                 x = x.to(self.device_id)
                 y = y.to(self.device_id)
                 # compute loss
@@ -267,7 +228,26 @@ class BaseTrainer:
                 f"{split}_ssim": float(ssim)
             }
                 loss_record.update(update_dict, n=y_pred.shape[0])
-
+                
+                # 可视化逻辑：每次评估只可视化第一个batch的第一个样本
+                if should_visualize and not visualized and batch_idx == 0:
+                    sample_factor = self.config['data'].get('sample_factor', [2, 2])[0]
+                    
+                    # 只取batch中的第一个样本
+                    save_filename = vis_dir / f"sample_epoch_{epoch:04d}.png"
+                    visualize_flow_field(
+                        sr_output=y_pred[0:1], # shape: [1, H, W, C]
+                        hr_gt=y[0:1],          # shape: [1, H, W, C]
+                        save_path=save_filename,
+                        title=f'Epoch {epoch} - Validation Sample',
+                        sample_factor=sample_factor
+                    )
+                    visualized = True
+                    visualization_path = save_filename
+                    self.logger(f"Saved visualization to {save_filename}")
+                    
+        if visualization_path:
+            loss_record.visualization_path = visualization_path
         return loss_record
 
     def process(self, model: torch.nn.Module, train_loader, valid_loader, test_loader, optimizer, 
@@ -319,27 +299,37 @@ class BaseTrainer:
 
             # --- 修正: 日志记录和评估的配置访问 ---
             if self.is_main_process:
-                self.logger(f"Epoch {epoch}/{epochs-1} | {train_loss} | lr: {optimizer.param_groups[0]['lr']:.6f}")
+                current_lr = optimizer.param_groups[0]['lr']
+                self.logger(f"Epoch {epoch}/{epochs-1} | {train_loss} | lr: {current_lr:.6f}")
                 if self.log_config.get('wandb', False):
-                    wandb.log(train_loss.to_dict(), step=epoch)
-                    
+                    train_metrics = train_loss.to_dict()
+                    train_metrics['train_lr'] = current_lr
+                    wandb.log(train_metrics, step=epoch)
+
             stop_signal = torch.tensor(0, device=self.device_id)
 
             # 从 'train' 子字典获取 eval_freq
             if (epoch + 1) % self.train_config.get('eval_freq', 1) == 0:
                 if self.is_main_process:
                     visualize = self.train_config.get('visualize', False)
-                    num_visuals = self.train_config.get('num_visuals', 10)
+                    visual_interval = self.train_config.get('visual_interval', 1)
                     # 解决锁死最关键的步骤
                     model_to_eval = model.module if self.is_distributed else model
                     # valid_loss = self.evaluate(model, valid_loader, criterion, metrics, split="valid",visualize=visualize,num_visuals=num_visuals,epoch=epoch,**kwargs)
-                    valid_loss = self.evaluate(model_to_eval, valid_loader, criterion, metrics, split="valid",visualize=visualize,num_visuals=num_visuals,epoch=epoch,**kwargs)
+                    valid_loss = self.evaluate(model_to_eval, valid_loader, criterion, metrics, split="valid",visualize=visualize,visual_interval=visual_interval,epoch=epoch,**kwargs)
                 
                 if self.is_main_process:
+                    current_lr = optimizer.param_groups[0]['lr']
                     self.logger(f"Epoch {epoch}/{epochs-1} | {valid_loss}")
                     valid_metrics = valid_loss.to_dict()
+                    valid_metrics['valid_lr'] = current_lr
 
                     if self.log_config.get('wandb', False):
+                        if hasattr(valid_loss, 'visualization_path') and valid_loss.visualization_path:
+                            valid_metrics['validation_visualization'] = wandb.Image(
+                                str(valid_loss.visualization_path),
+                                caption=f"Epoch {epoch} Validation Sample"
+                        )
                         wandb.log(valid_metrics, step=epoch)
 
                     if not best_metrics or valid_metrics['valid_loss'] < best_metrics.get('valid_loss', float('inf')):
@@ -413,8 +403,13 @@ class BaseTrainer:
         if self.is_main_process:
             self.logger(f"Final Test Metrics: {test_loss}")
             if self.log_config.get('wandb', False):
+                final_lr = optimizer.param_groups[0]['lr']
+                test_metrics = test_loss.to_dict()
+                test_metrics['test_lr'] = final_lr
+                
                 wandb.run.summary["best_epoch"] = best_epoch
-                wandb.run.summary.update(test_loss.to_dict())
+                wandb.run.summary["final_lr"] = final_lr
+                wandb.run.summary.update(test_metrics)
                 wandb.finish()
         
         # 在程序结束前同步所有进程
