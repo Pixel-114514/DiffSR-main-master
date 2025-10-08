@@ -7,7 +7,7 @@ from .MWT import MWTTrainer
 from .swin import SwinTransformerTrainer
 from .sronet import SRNOTrainer
 from .galerkin import GalerkinTrainer
-
+from .sr3 import SR3Trainer
 TRAINER_DICT = {
     'FNO2d': FNO2DTrainer,
     'DDPM': DDPMTrainer,
@@ -16,4 +16,5 @@ TRAINER_DICT = {
     'Swin_Transformer': SwinTransformerTrainer,
     'SRNO': SRNOTrainer,
     'Galerkin_Transformer': GalerkinTrainer,
+    'SR3': SR3Trainer
 }

@@ -43,11 +43,11 @@ class NavierStokes2DDataset:
         self.valid_loader = DataLoader(self.valid_dataset, 
                                        batch_size=eval_batchsize, 
                                        shuffle=False, 
-                                       sampler=valid_sampler)
+                                       sampler=None)
         self.test_loader = DataLoader(self.test_dataset, 
                                       batch_size=eval_batchsize, 
                                       shuffle=False, 
-                                      sampler=test_sampler)
+                                      sampler=None)
 
 
     def load_data(self, data_path, sample_factor,

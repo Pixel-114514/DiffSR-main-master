@@ -14,7 +14,8 @@ from torch.nn.parallel import DistributedDataParallel
 from matplotlib import pyplot as plt
 from utils.loss import LossRecord
 import numpy as np
-
+from utils.visualization import visualize_flow_field
+from torch.nn import functional as F
 class BaseTrainer:
     """
     一个通用的、支持DDP（分布式数据并行）和断点重训的训练器基类。
@@ -223,6 +224,15 @@ class BaseTrainer:
         model_to_load.load_state_dict(state_dict)
 
     # train_one_epoch 和 evaluate 无需修改其内部逻辑
+    def _match_size(self, x, y, mode="bilinear"):
+        """
+        将 x 的空间尺寸插值到与 y 一致。
+        x: [B, C, H1, W1]
+        y: [B, C, H2, W2]
+        """
+        _, _, H, W = y.shape
+        x_resized = F.interpolate(x, size=(H, W), mode=mode, align_corners=False)
+        return x_resized
     
     def train_one_epoch(self, model: torch.nn.Module, train_loader, optimizer, criterion, scheduler=None, **kwargs) -> LossRecord:
         """训练一个epoch的核心逻辑。"""
@@ -236,6 +246,8 @@ class BaseTrainer:
                 x = x.permute(0, 3, 1, 2).contiguous()
             if y.dim() == 4:
                 y = y.permute(0, 3, 1, 2).contiguous()
+                
+            x = self._match_size(x, y, mode="bicubic")  
 
             # 构造符合模型需求的字典
             data_batch = {
@@ -252,7 +264,7 @@ class BaseTrainer:
             optimizer.zero_grad()
             loss = model(data_batch)
             batch_szie = data_batch['HR'].shape[0]
-            loss_record.update({"train_loss": loss.sum().item()}, n=batch_szie)
+            loss_record.update({"train_loss": loss.sum().item()/batch_szie}, n=batch_szie)
             loss.backward()
             clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
@@ -263,78 +275,201 @@ class BaseTrainer:
         return loss_record
 
     @torch.no_grad()
-    def evaluate(self, model: torch.nn.Module, eval_loader, criterion, metrics, split: str = "valid",epoch: int = 0, visualize: bool = False, num_visuals: int = 4, **kwargs) -> LossRecord:
-        """评估模型的核心逻辑，包含DDP指标同步。"""
+    # def evaluate(self, model: torch.nn.Module, eval_loader, criterion, metrics, split: str = "valid",epoch: int = 0, visualize: bool = False, num_visuals: int = 4, visual_interval: int = 1,**kwargs  ) -> LossRecord:
+    #     """评估模型的核心逻辑，包含DDP指标同步。"""
+    #     model.eval()
+    #     metric_names = ['mae','mse', 'rmse','relative_l2', 'psnr','ssim']
+    #     tracked_metrics = [f"{split}_loss"] + [f"{split}_{name}" for name in metric_names]
+    #     loss_record = LossRecord(tracked_metrics)
+    #     model_instance = model.module if isinstance(model, DistributedDataParallel) else model
+    #     # 只在主进程且满足可视化条件时创建可视化目录
+    #     should_visualize = (
+    #         self.is_main_process and 
+    #         visualize and 
+    #         split == "valid" and  # 只在验证集上可视化
+    #         (epoch % visual_interval == 0)  # 满足可视化间隔
+    #     )
+    #     if should_visualize:
+    #         vis_dir = self.saving_path / 'visualization' / f"epoch_{epoch:04d}"
+    #         vis_dir.mkdir(exist_ok=True, parents=True)
+    #         self.logger(f"Visualizing sample at epoch {epoch} to {vis_dir}")
+        
+    #     model.eval()
+    #     visualized = False
+    #     visualization_path = None
+    #     for batch_index,data_batch in enumerate(eval_loader):
+    #         x,y = data_batch
+    #         x = x[..., 2:].contiguous()
+    #         if x.dim() == 4:
+    #             x = x.permute(0, 3, 1, 2).contiguous()
+    #         if y.dim() == 4:
+    #             y = y.permute(0, 3, 1, 2).contiguous()
+    #         x= self._match_size(x, y, mode="bicubic")
+            
+    #     # 构造符合模型需求的字典
+    #         data_batch = {
+    #         "SR": x.to(self.device_id),
+    #         "HR": y.to(self.device_id)
+    #         }
+    #         # 1. 将数据字典中的张量移动到 GPU
+    #         for key in data_batch:
+    #             if isinstance(data_batch[key], torch.Tensor):
+    #                 data_batch[key] = data_batch[key].to(self.device_id)
+    #         x_in = data_batch['SR'] # 输入 (上采样后的LR)
+    #         y = data_batch['HR']  # 目标 (原始HR)
+    #         batch_size = y.shape[0]
+    #         y_pred = model_instance.super_resolution(data_batch)
+    #         print("y_pred shape:", y_pred.shape)
+    #         y_pred = y_pred.view(y.shape)  # 确保预测结果形状与目标一致
+    #         # 反归一化逻辑
+    #         if hasattr(eval_loader.dataset, 'y_normalizer'):
+    #             y_decoded = self.decode_bchw(eval_loader.dataset.y_normalizer, y)
+    #             y_pred_decoded = self.decode_bchw(eval_loader.dataset.y_normalizer, y_pred)
+    #             x_in_decoded = self.decode_bchw(eval_loader.dataset.y_normalizer, x_in)
+    #         else:
+    #             y_decoded, y_pred_decoded,x_in_decoded = y, y_pred,x_in
+
+
+    #         loss = criterion(y_pred_decoded, y_decoded)
+    #         mae, mse, rmse, relative_l2, psnr, ssim = metrics(y_pred.detach().cpu().numpy(), y.detach().cpu().numpy())
+            
+    #         update_dict = {
+    #             f"{split}_loss": loss.sum().item(),
+    #             f"{split}_mae": float(mae),
+    #             f"{split}_mse": float(mse),
+    #             f"{split}_rmse": float(rmse),
+    #             f"{split}_relative_l2": float(relative_l2),
+    #             f"{split}_psnr": float(psnr),
+    #             f"{split}_ssim": float(ssim)
+    #         }
+    #         loss_record.update(update_dict, n=y_pred.shape[0])
+            
+    #             # 可视化逻辑：每次评估只可视化第一个batch的第一个样本
+    #         if should_visualize and not visualized and batch_index == 0:
+    #             sample_factor = self.config['data'].get('sample_factor', [2, 2])[0]
+                    
+    #                 # 只取batch中的第一个样本
+    #             save_filename = vis_dir / f"sample_epoch_{epoch:04d}.png"
+    #             y_pred = y_pred_decoded.permute(0, 2, 3, 1).contiguous()  # [B, C, H, W] -> [B, H, W, C]
+    #             y = y_decoded.permute(0, 2, 3, 1).contiguous()          # [B, C, H, W] -> [B, H, W, C]
+    #             visualize_flow_field(
+    #                     sr_output=y_pred[0:1], # shape: [1, H, W, C]
+    #                     hr_gt=y[0:1],          # shape: [1, H, W, C]
+    #                     save_path=save_filename,
+    #                     title=f'Epoch {epoch} - Validation Sample',
+    #                     sample_factor=sample_factor
+    #                 )
+    #             visualized = True
+    #             visualization_path = save_filename
+    #             self.logger(f"Saved visualization to {save_filename}")
+                    
+    #     if visualization_path:
+    #         loss_record.visualization_path = visualization_path
+
+                
+    #     return loss_record
+
+    def evaluate(
+        self, 
+        model: torch.nn.Module, 
+        eval_loader, 
+        criterion, 
+        metrics, 
+        split: str = "valid",
+        epoch: int = 0, 
+        visualize: bool = False, 
+        num_visuals: int = 4, 
+        visual_interval: int = 1,
+        **kwargs
+    ) -> LossRecord:
+        """评估模型的核心逻辑，包含DDP指标同步与可视化。"""
         model.eval()
         metric_names = ['mae','mse', 'rmse','relative_l2', 'psnr','ssim']
         tracked_metrics = [f"{split}_loss"] + [f"{split}_{name}" for name in metric_names]
         loss_record = LossRecord(tracked_metrics)
         model_instance = model.module if isinstance(model, DistributedDataParallel) else model
-        visualized_count = 0
 
-        if self.is_main_process and visualize:
-            vis_dir = self.saving_path/'visualization' / f"visualizations_epoch_{epoch}"
+        # --- 可视化条件 ---
+        should_visualize = (
+            self.is_main_process and 
+            visualize and 
+            split == "valid" and  
+            (epoch % visual_interval == 0)
+        )
+        if should_visualize:
+            vis_dir = self.saving_path / 'visualization' / f"epoch_{epoch:04d}"
             vis_dir.mkdir(exist_ok=True, parents=True)
-        for i,data_batch in enumerate(eval_loader):
-            x,y = data_batch
-            x = x[..., 2:].contiguous()
-            if x.dim() == 4:
-                x = x.permute(0, 3, 1, 2).contiguous()
-            if y.dim() == 4:
-                y = y.permute(0, 3, 1, 2).contiguous()
+            self.logger(f"Visualizing first {num_visuals} samples at epoch {epoch} to {vis_dir}")
 
-        # 构造符合模型需求的字典
-            data_batch = {
-            "SR": x.to(self.device_id),
-            "HR": y.to(self.device_id)
-            }
-            # 1. 将数据字典中的张量移动到 GPU
-            for key in data_batch:
-                if isinstance(data_batch[key], torch.Tensor):
-                    data_batch[key] = data_batch[key].to(self.device_id)
-            x_in = data_batch['SR'] # 输入 (上采样后的LR)
-            y = data_batch['HR']  # 目标 (原始HR)
-            batch_size = y.shape[0]
-            y_pred = model_instance.super_resolution(data_batch)
-            print("rank",self.device_id,"item",i)
-            y_pred = y_pred.view(y.shape)  # 确保预测结果形状与目标一致
-            # 反归一化逻辑
-            if hasattr(eval_loader.dataset, 'y_normalizer'):
-                y_decoded = self.decode_bchw(eval_loader.dataset.y_normalizer, y)
-                y_pred_decoded = self.decode_bchw(eval_loader.dataset.y_normalizer, y_pred)
-                x_in_decoded = self.decode_bchw(eval_loader.dataset.y_normalizer, x_in)
-            else:
-                y_decoded, y_pred_decoded,x_in_decoded = y, y_pred,x_in
+        visualization_paths = []
 
+        with torch.no_grad():
+            for batch_idx, (x, y) in enumerate(eval_loader):
+                x = x[..., 2:].contiguous()
+                if x.dim() == 4:
+                    x = x.permute(0, 3, 1, 2).contiguous()
+                if y.dim() == 4:
+                    y = y.permute(0, 3, 1, 2).contiguous()
+                x = self._match_size(x, y, mode="bicubic")
 
-            loss = criterion(y_pred_decoded, y_decoded)
-            mae, mse, rmse, relative_l2, psnr, ssim = metrics(y_pred.detach().cpu().numpy(), y.detach().cpu().numpy())
-            
-            update_dict = {
-                f"{split}_loss": loss.sum().item(),
-                f"{split}_mae": float(mae),
-                f"{split}_mse": float(mse),
-                f"{split}_rmse": float(rmse),
-                f"{split}_relative_l2": float(relative_l2),
-                f"{split}_psnr": float(psnr),
-                f"{split}_ssim": float(ssim)
-            }
-            loss_record.update(update_dict, n=y_pred.shape[0])
-            
-            if self.is_main_process and visualize and visualized_count < num_visuals:
-                # 假设batch_size=1
-                save_filename = vis_dir / f"sample_{i+1}.png"
-                self.visualize_flow_field(
-                    lr_input=x_in_decoded,
-                    sr_output=y_pred_decoded,
-                    hr_gt=y_decoded,
-                    save_path=save_filename,
-                    title=f'Epoch {epoch} - Sample {i+1}'
+                # --- 准备数据字典 ---
+                data_batch = {"SR": x.to(self.device_id), "HR": y.to(self.device_id)}
+                for key in data_batch:
+                    if isinstance(data_batch[key], torch.Tensor):
+                        data_batch[key] = data_batch[key].to(self.device_id)
+
+                x_in = data_batch['SR']
+                y = data_batch['HR']
+                y_pred = model_instance.super_resolution(data_batch)
+                y_pred = y_pred.view(y.shape)
+
+                # --- 反归一化 ---
+                if hasattr(eval_loader.dataset, 'y_normalizer'):
+                    y_decoded = self.decode_bchw(eval_loader.dataset.y_normalizer, y)
+                    y_pred_decoded = self.decode_bchw(eval_loader.dataset.y_normalizer, y_pred)
+                else:
+                    y_decoded, y_pred_decoded = y, y_pred
+
+                # --- 计算loss和metrics ---
+                loss = criterion(y_pred_decoded, y_decoded)
+                mae, mse, rmse, relative_l2, psnr, ssim = metrics(
+                    y_pred.detach().cpu().numpy(), y.detach().cpu().numpy()
                 )
-                visualized_count += 1
 
-                
+                update_dict = {
+                    f"{split}_loss": loss.sum().item(),
+                    f"{split}_mae": float(mae),
+                    f"{split}_mse": float(mse),
+                    f"{split}_rmse": float(rmse),
+                    f"{split}_relative_l2": float(relative_l2),
+                    f"{split}_psnr": float(psnr),
+                    f"{split}_ssim": float(ssim)
+                }
+                loss_record.update(update_dict, n=y_pred.shape[0])
+
+                if should_visualize and batch_idx < num_visuals:
+                    sample_factor = self.config['data'].get('sample_factor', [2, 2])[0]
+                    save_filename = vis_dir / f"sample_batch{batch_idx}_epoch_{epoch:04d}.png"
+
+                    # [B,C,H,W] -> [B,H,W,C]
+                    y_pred_decoded_vis = y_pred_decoded.permute(0, 2, 3, 1).contiguous()
+                    y_decoded_vis = y_decoded.permute(0, 2, 3, 1).contiguous()
+
+                    visualize_flow_field(
+                        sr_output=y_pred_decoded_vis,
+                        hr_gt=y_decoded_vis,
+                        save_path=save_filename,
+                        title=f'Epoch {epoch} - Validation Sample {batch_idx}',
+                        sample_factor=sample_factor
+                    )
+                    visualization_paths.append(save_filename)
+                    self.logger(f"Saved visualization for batch {batch_idx} to {save_filename}")
+
+
+        if visualization_paths:
+            loss_record.visualization_path = visualization_paths
         return loss_record
+
 
     def process(self, model: torch.nn.Module, train_loader, valid_loader, test_loader, optimizer, 
                 criterion, regularizer=None, scheduler=None, **kwargs):
@@ -342,9 +477,9 @@ class BaseTrainer:
         完整的训练、验证和测试流程，支持断点重训。
         """
         # --- 1. 初始化和DDP封装 ---
-        # model.to(self.device_id)
-        # if self.is_distributed:
-        #     model = DistributedDataParallel(model, device_ids=[self.device_id], find_unused_parameters=False)
+        model.to(self.device_id)
+        if self.is_distributed:
+            model = DistributedDataParallel(model, device_ids=[self.device_id], find_unused_parameters=False)
 
         start_epoch = 0
         best_epoch = -1

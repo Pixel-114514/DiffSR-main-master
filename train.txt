@@ -17,3 +17,5 @@ python main.py --config configs/ns2d/fno.yaml
 torchrun --nproc_per_node=2 main.py --config configs/ns2d/fno.yaml
 
 BASICSR_JIT=True torchrun --nproc_per_node=2 main.py --config configs/ns2d/sr_idm.yaml
+
+torchrun --nproc_per_node=2 main.py --config configs/ns2d/sr_sr3_4x_debug.yaml
