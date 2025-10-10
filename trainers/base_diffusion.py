@@ -246,7 +246,6 @@ class BaseTrainer:
                 x = x.permute(0, 3, 1, 2).contiguous()
             if y.dim() == 4:
                 y = y.permute(0, 3, 1, 2).contiguous()
-                
             x = self._match_size(x, y, mode="bicubic")  
 
             # 构造符合模型需求的字典
@@ -264,10 +263,14 @@ class BaseTrainer:
             optimizer.zero_grad()
             loss = model(data_batch)
             batch_szie = data_batch['HR'].shape[0]
-            loss_record.update({"train_loss": loss.sum().item()/batch_szie}, n=batch_szie)
             loss.backward()
             clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
+
+            if self.is_distributed:
+                # 集合通信操作，会收集所有的GPU进程上的loss，然后平均，将结果存回每个进程的loss变量中
+                dist.all_reduce(loss, op=dist.ReduceOp.AVG)
+            loss_record.update({"train_loss": loss.item()}, n=batch_szie)
 
         if scheduler:
             scheduler.step()
@@ -437,7 +440,7 @@ class BaseTrainer:
                 )
 
                 update_dict = {
-                    f"{split}_loss": loss.sum().item(),
+                    f"{split}_loss": loss.item(),
                     f"{split}_mae": float(mae),
                     f"{split}_mse": float(mse),
                     f"{split}_rmse": float(rmse),
@@ -479,7 +482,7 @@ class BaseTrainer:
         # --- 1. 初始化和DDP封装 ---
         model.to(self.device_id)
         if self.is_distributed:
-            model = DistributedDataParallel(model, device_ids=[self.device_id], find_unused_parameters=False)
+            model = DistributedDataParallel(model, device_ids=[self.device_id], find_unused_parameters=True)
 
         start_epoch = 0
         best_epoch = -1
@@ -537,7 +540,23 @@ class BaseTrainer:
                     self.logger(f"Epoch {epoch}/{epochs-1} | {valid_loss}")
                     valid_metrics = valid_loss.to_dict()
 
-                    if self.log_config.get('wandb', False):
+                    wandb.log(valid_metrics, step=epoch)
+
+                    # 然后单独处理和记录图像
+                    if hasattr(valid_loss, 'visualization_path') and valid_loss.visualization_path:
+                        # 创建一个字典来存放所有的图像
+                        visualizations_dict = {}
+                        # 遍历 evaluate 函数返回的图像路径列表
+                        for i, img_path in enumerate(valid_loss.visualization_path):
+                            # 为每个图像创建一个 wandb.Image 对象，并使用唯一的键名
+                            visualizations_dict[f'validation_sample_{i}'] = wandb.Image(
+                                str(img_path),  # 确保路径是字符串
+                                caption=f"Epoch {epoch} - Sample {i}"
+                            )
+                        
+                        # 将包含所有图像的字典记录到 wandb
+                        if visualizations_dict:
+                            wandb.log(visualizations_dict, step=epoch)
                         wandb.log(valid_metrics, step=epoch)
 
                     if not best_metrics or valid_metrics['valid_loss'] < best_metrics.get('valid_loss', float('inf')):

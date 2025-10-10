@@ -19,7 +19,7 @@ model:
       linear_end: 2.0e-2
     val:
       schedule: linear
-      n_timestep: 100
+      n_timestep: 1000
       linear_start: 1.0e-4
       linear_end: 2.0e-2
   diffusion:
@@ -33,7 +33,7 @@ data:
   sample_factor: [2,2]
   train_batchsize: 128
   eval_batchsize: 1
-  train_ratio: 0.8
+  train_ratio: 0.08
   valid_ratio: 0.001
   test_ratio: 0.001
   subset: False
@@ -47,7 +47,7 @@ train:
   device: 0
   epochs: 20
   patience: 2
-  eval_freq: 5
+  eval_freq: 2
   saving_best: True
   saving_checkpoint: True
   checkpoint_freq: 1
@@ -73,5 +73,5 @@ log:
   verbose: True
   log: True
   log_dir: './logs'
-  wandb: False
-  wandb_project: ''
+  wandb: True
+  wandb_project: 'SR3'

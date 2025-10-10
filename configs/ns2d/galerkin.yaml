@@ -14,13 +14,13 @@ model:
 
 data:
   dataset: 'NavierStokes2D'
-  data_path: "/home/yc/CVPR_26_fluid_SR/DiffSR-main-master1/DiffSR-main-master/NavierStokes_V1e-5_N1200_T20.mat"
+  data_path: "/home/dsw/ocean_lzh/ocean_sr/NavierStokes_V1e-5_N1200_T20.mat"
   sample_factor: [2, 2]
-  train_batchsize: 16
-  eval_batchsize: 16
-  train_ratio: 0.08
-  valid_ratio: 0.01
-  test_ratio: 0.01
+  train_batchsize: 128
+  eval_batchsize: 128
+  train_ratio: 0.979
+  valid_ratio: 0.001
+  test_ratio: 0.02
   subset: False
   subset_ratio: 0.1
   normalize: True
@@ -31,7 +31,7 @@ train:
   random_seed: 42
   cuda: True
   device: 0
-  epochs: 20
+  epochs: 200
   patience: 10
   eval_freq: 5
   saving_best: True

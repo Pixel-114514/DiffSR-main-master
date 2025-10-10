@@ -3,6 +3,7 @@ import torch
 import torch.distributed as dist
 from typing import Dict, Any
 import os
+from datetime import timedelta
 
 
 
@@ -24,7 +25,7 @@ def setup_ddp() -> Dict[str, Any]:
         # 告诉当前进程应该使用哪一块GPU，确保同一台机器上的每个进程都绑定到一块不同的GPU上
         torch.cuda.set_device(local_rank)
         # 初始化DDP进程组，确保不同进程之间可以互相通信
-        dist.init_process_group(backend='nccl', init_method='env://')
+        dist.init_process_group(backend='nccl', init_method='env://',timeout = timedelta(minutes=700))
         # 设置一个同步点，等待所有进程同步
         dist.barrier()
         

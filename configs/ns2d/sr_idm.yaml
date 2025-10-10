@@ -29,9 +29,9 @@ model:
 
 data:
   dataset: 'NavierStokes2D'
-  data_path: "C:/Users/jjj/Desktop/program/code/diffsr_DDP_DDPM/NavierStokes_V1e-5_N1200_T20.mat"
+  data_path: "/home/dsw/ocean_lzh/ocean_sr/NavierStokes_V1e-5_N1200_T20.mat"
   downsample_factor: 4
-  train_batchsize: 16
+  train_batchsize: 64
   eval_batchsize: 1
   train_ratio: 0.8
   valid_ratio: 0.001
@@ -73,4 +73,4 @@ log:
   log: True
   log_dir: './logs'
   wandb: False
-  wandb_project: ''
+  wandb_project: 'IDM-NavierStokes2D'

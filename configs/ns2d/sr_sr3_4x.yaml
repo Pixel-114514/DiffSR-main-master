@@ -6,7 +6,7 @@ model:
     in_channel: 2
     out_channel: 1
     inner_channel: 64
-    channel_multiplier: [1, 1, 2, 2, 4, 4]
+    channel_multiplier: [1, 2, 4, 8, 8]
     attn_res: [16]
     res_blocks: 2
     dropout: 0.2
@@ -31,11 +31,11 @@ data:
   dataset: 'NavierStokes2D'
   data_path: "/home/dsw/ocean_lzh/ocean_sr/NavierStokes_V1e-5_N1200_T20.mat"
   sample_factor: [2,2]
-  train_batchsize: 128
+  train_batchsize: 64
   eval_batchsize: 1
-  train_ratio: 0.979
+  train_ratio: 0.989
   valid_ratio: 0.001
-  test_ratio: 0.02
+  test_ratio: 0.01
   subset: False
   subset_ratio: 0.1
   normalize: True
@@ -45,12 +45,12 @@ train:
   random_seed: 42
   cuda: True
   device: 0
-  epochs: 300
+  epochs: 600
   patience: 10
-  eval_freq: 20
+  eval_freq: 50
   saving_best: True
-  saving_checkpoint: False
-  checkpoint_freq: 10
+  saving_checkpoint: True
+  checkpoint_freq: 100
   model_type: 'diffusion'  # 'fno' or 'diffusion'
   phase: 'train'  # 'train' or 'val'
   model_name: 'SR3'
@@ -60,7 +60,7 @@ train:
 
 optimize:
   optimizer: 'AdamW'
-  lr: 0.0004
+  lr: 0.00004
   weight_decay: 0.001
 
 schedule:
@@ -72,5 +72,5 @@ log:
   verbose: True
   log: True
   log_dir: './logs'
-  wandb: False
-  wandb_project: ''
+  wandb: True
+  wandb_project: 'SR3-NavierStokes2D'

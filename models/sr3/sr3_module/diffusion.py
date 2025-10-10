@@ -84,7 +84,7 @@ class GaussianDiffusion(nn.Module):
     def set_loss(self, device):
         if self.loss_type == 'lploss':
             from utils.loss import LpLoss
-            self.loss_func = LpLoss(d=2, p=2, size_average=False)
+            self.loss_func = LpLoss(d=2, p=2, size_average=True)
         else:
             raise NotImplementedError()
 

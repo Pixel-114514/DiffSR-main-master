@@ -15,7 +15,11 @@ python main.py --config configs/ns2d/fno.yaml
 
 # --nproc_per_node=2 表示在当前节点（机器）上启动2个进程
 torchrun --nproc_per_node=2 main.py --config configs/ns2d/fno.yaml
-
-BASICSR_JIT=True torchrun --nproc_per_node=2 main.py --config configs/ns2d/sr_idm.yaml
+export TORCH_CUDA_ARCH_LIST="8.9"
+BASICSR_JIT=True torchrun --nproc_per_node=4 main.py --config configs/ns2d/sr_idm.yaml
 
 torchrun --nproc_per_node=2 main.py --config configs/ns2d/sr_sr3_4x_debug.yaml
+
+torchrun --nproc_per_node=4 main.py --config configs/ns2d/galerkin.yaml
+
+python main.py --config configs/ns2d/galerkin.yaml
